@@ -36,7 +36,11 @@ export class PromptRunner {
   // ---------------------------------------------------------------------------
   async run(): Promise<TestResult[]> {
     const startTime = Date.now();
-    console.log('🚀 Starting prompt execution...\n');
+    const isJsonOutput = this.config.reporter.constructor.name === 'JsonReporter';
+    
+    if (!isJsonOutput) {
+      console.log('🚀 Starting prompt execution...\n');
+    }
 
     try {
       // Load all prompts and samples
@@ -47,11 +51,15 @@ export class PromptRunner {
       const testPairs = this.matchPromptsWithSamples(prompts, samples);
       
       if (testPairs.length === 0) {
-        console.log('⚠️  No matching prompt-sample pairs found');
+        if (!isJsonOutput) {
+          console.log('⚠️  No matching prompt-sample pairs found');
+        }
         return [];
       }
 
-      console.log(`📝 Found ${testPairs.length} test(s) to execute\n`);
+      if (!isJsonOutput) {
+        console.log(`📝 Found ${testPairs.length} test(s) to execute\n`);
+      }
 
       // Execute all tests
       const results: TestResult[] = [];
@@ -63,13 +71,16 @@ export class PromptRunner {
       // Report results
       this.config.reporter.report(results);
 
-      const totalTime = Date.now() - startTime;
-      console.log(`\n⏱️  Total execution time: ${totalTime}ms`);
+      if (!isJsonOutput) {
+        const totalTime = Date.now() - startTime;
+        console.log(`\n⏱️  Total execution time: ${totalTime}ms`);
+      }
 
       return results;
 
     } catch (error) {
-      console.error('❌ Fatal error during execution:', error instanceof Error ? error.message : String(error));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Fatal error during execution:', errorMessage);
       throw error;
     }
   }
@@ -109,7 +120,8 @@ export class PromptRunner {
         console.log(`✅ Loaded prompt: ${prompt.name} (${file})`);
 
       } catch (error) {
-        console.warn(`⚠️  Failed to load prompt file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`⚠️  Failed to load prompt file ${file}: ${errorMessage}`);
       }
     }
 
@@ -152,7 +164,8 @@ export class PromptRunner {
         console.log(`✅ Loaded ${samples.test_cases.length} sample(s) for: ${promptName} (${file})`);
 
       } catch (error) {
-        console.warn(`⚠️  Failed to load sample file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`⚠️  Failed to load sample file ${file}: ${errorMessage}`);
       }
     }
 
@@ -231,6 +244,7 @@ export class PromptRunner {
         console.log(`  ${status} ${testCase.name} (${result.execution_time_ms}ms)`);
 
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         const result: TestResult = {
           prompt_name: prompt.name,
           test_case_name: testCase.name,
@@ -239,11 +253,11 @@ export class PromptRunner {
           response: '',
           assertions_checked: { should_contain: [], should_not_contain: [] },
           execution_time_ms: Date.now() - startTime,
-          error: error instanceof Error ? error.message : String(error)
+          error: errorMessage
         };
 
         results.push(result);
-        console.log(`  ❌ ${testCase.name} - Error: ${error instanceof Error ? error.message : String(error)}`);
+        console.log(`  ❌ ${testCase.name} - Error: ${errorMessage}`);
       }
     }
 
