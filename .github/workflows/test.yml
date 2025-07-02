@@ -1,0 +1,161 @@
+# File: .github/workflows/test.yml
+# Purpose: Automated prompt testing on PRs and pushes
+# Runs prompt-as-code harness and reports results
+
+name: Prompt Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  prompt-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # -------------------------------------------------------------------------
+    # Setup Environment
+    # -------------------------------------------------------------------------
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    # -------------------------------------------------------------------------
+    # Build and Install
+    # -------------------------------------------------------------------------
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build TypeScript
+      run: npm run build
+      
+    - name: Verify CLI works
+      run: node dist/cli.js --help
+    
+    # -------------------------------------------------------------------------
+    # Run Prompt Tests
+    # -------------------------------------------------------------------------
+    - name: Run prompt tests
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        # Run with JSON output for parsing
+        node dist/cli.js run --output=json > test-results.json || true
+        
+        # Show human-readable results in logs
+        echo "=== Prompt Test Results ==="
+        node dist/cli.js run --output=console || true
+        
+    # -------------------------------------------------------------------------
+    # Process Results
+    # -------------------------------------------------------------------------
+    - name: Parse test results
+      id: test-results
+      run: |
+        if [ -f test-results.json ]; then
+          # Extract summary statistics
+          TOTAL=$(jq -r '.summary.total_tests' test-results.json)
+          PASSED=$(jq -r '.summary.passed' test-results.json)
+          FAILED=$(jq -r '.summary.failed' test-results.json)
+          PASS_RATE=$(jq -r '.summary.pass_rate' test-results.json)
+          
+          echo "total_tests=$TOTAL" >> $GITHUB_OUTPUT
+          echo "passed_tests=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed_tests=$FAILED" >> $GITHUB_OUTPUT
+          echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
+          
+          # Set job status
+          if [ "$FAILED" -gt "0" ]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "status=error" >> $GITHUB_OUTPUT
+          echo "No test results found"
+        fi
+    
+    # -------------------------------------------------------------------------
+    # Comment on PR with Results
+    # -------------------------------------------------------------------------
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let comment = '## 🧪 Prompt Test Results\n\n';
+          
+          if (fs.existsSync('test-results.json')) {
+            const results = JSON.parse(fs.readFileSync('test-results.json', 'utf8'));
+            const { summary } = results;
+            
+            // Build status badge
+            const status = summary.failed > 0 ? '❌ FAILED' : '✅ PASSED';
+            const passRate = `${summary.pass_rate}%`;
+            
+            comment += `**Status:** ${status}\n`;
+            comment += `**Tests:** ${summary.passed}/${summary.total_tests} passed (${passRate})\n`;
+            comment += `**Execution Time:** ${summary.total_execution_time_ms}ms\n\n`;
+            
+            // Add details for failed tests
+            if (summary.failed > 0) {
+              comment += '### ❌ Failed Tests\n\n';
+              results.results
+                .filter(r => !r.passed)
+                .forEach(result => {
+                  comment += `- **${result.prompt_name} → ${result.test_case_name}**\n`;
+                  if (result.error) {
+                    comment += `  - Error: ${result.error}\n`;
+                  } else {
+                    const failedAssertions = [
+                      ...result.assertions_checked.should_contain.filter(a => !a.passed),
+                      ...result.assertions_checked.should_not_contain.filter(a => !a.passed)
+                    ];
+                    failedAssertions.forEach(assertion => {
+                      comment += `  - Failed: "${assertion.assertion}"\n`;
+                    });
+                  }
+                });
+            }
+            
+            comment += '\n---\n*Automated by prompt-as-code harness*';
+          } else {
+            comment += '❌ **Error:** No test results generated\n\n';
+            comment += 'Check the workflow logs for details.';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    # -------------------------------------------------------------------------
+    # Upload Test Results as Artifact
+    # -------------------------------------------------------------------------
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: prompt-test-results
+        path: test-results.json
+        retention-days: 30
+    
+    # -------------------------------------------------------------------------
+    # Fail Job if Tests Failed
+    # -------------------------------------------------------------------------
+    - name: Fail on test failures
+      if: steps.test-results.outputs.status == 'failure'
+      run: |
+        echo "❌ Prompt tests failed!"
+        exit 1
