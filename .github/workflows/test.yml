@@ -50,8 +50,17 @@ jobs:
         echo "=== Prompt Test Results ==="
         node dist/cli.js run --output=console || true
         
-        # Run with JSON output for parsing (suppress console output)
-        node dist/cli.js run --output=json > test-results.json 2>/dev/null || echo '{"summary":{"total_tests":0,"passed":0,"failed":0,"pass_rate":0,"total_execution_time_ms":0},"results":[],"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"}' > test-results.json
+        # Run with JSON output and extract only the JSON part
+        node dist/cli.js run --output=json > raw-output.txt 2>&1 || true
+        
+        # Extract only the JSON (everything from first { to last })
+        grep -E '^\s*\{' raw-output.txt > test-results.json || echo '{"summary":{"total_tests":0,"passed":0,"failed":0,"pass_rate":0,"total_execution_time_ms":0},"results":[],"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"}' > test-results.json
+        
+        # If we got a partial line, try to get the full JSON block
+        if ! jq . test-results.json > /dev/null 2>&1; then
+          # Extract from first { to end of file
+          sed -n '/^{/,$p' raw-output.txt > test-results.json || echo '{"summary":{"total_tests":0,"passed":0,"failed":0,"pass_rate":0,"total_execution_time_ms":0},"results":[],"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"}' > test-results.json
+        fi
         
     # -------------------------------------------------------------------------
     # Process Results
