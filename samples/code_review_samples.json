@@ -1,0 +1,12 @@
+[
+  {
+    "name": "undocumented_function",
+    "input": {
+      "code": "function add(a, b) { return a + b }"
+    },
+    "assertions": {
+      "should_contain": ["missing documentation", "style"],
+      "should_not_contain": ["looks good", "no issues"]
+    }
+  }
+]

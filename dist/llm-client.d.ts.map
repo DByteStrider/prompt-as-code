@@ -1,0 +1,1 @@
+{"version":3,"file":"llm-client.d.ts","sourceRoot":"","sources":["../harness/llm-client.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAGH,OAAO,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAMvC,qBAAa,SAAS;IACpB,OAAO,CAAC,MAAM,CAAS;gBAKX,MAAM,EAAE,MAAM;IASpB,aAAa,CACjB,UAAU,EAAE,MAAM,EAClB,MAAM,EAAE,YAAY,EACpB,aAAa,CAAC,EAAE,MAAM,GACrB,OAAO,CAAC,MAAM,CAAC;CAyBnB"}

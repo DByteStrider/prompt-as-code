@@ -1,0 +1,42 @@
+{
+  "name": "prompt-as-code",
+  "version": "1.0.0",
+  "description": "A harness for running versioned prompts against language models with test validation",
+  "main": "dist/cli.js",
+  "keywords": ["llm", "prompts", "testing", "openai", "cli", "automation"],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/prompt-as-code.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.7",
+    "jest": "^30.0.3",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "js-yaml": "^4.1.0",
+    "openai": "^5.8.2"
+  },
+  "bin": {
+    "prompt-as-code": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublish": "npm run clean && npm run build",
+    "link": "npm run build && npm link",
+    "test": "npm run build && node dist/cli.js run --help"
+  }
+}

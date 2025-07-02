@@ -1,0 +1,13 @@
+name: "code_review"
+version: "1.0"
+description: "Reviews code for style and logic issues"
+template: |
+  Review this code for:
+  - Style consistency
+  - Logic errors
+  - Documentation gaps
+  
+  Code:
+  {{code}}
+model: "gpt-4"
+temperature: 0.1
