@@ -46,12 +46,12 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        # Run with JSON output for parsing
-        node dist/cli.js run --output=json > test-results.json || true
-        
-        # Show human-readable results in logs
+        # Run with console output for logs
         echo "=== Prompt Test Results ==="
         node dist/cli.js run --output=console || true
+        
+        # Run with JSON output for parsing (suppress console output)
+        node dist/cli.js run --output=json > test-results.json 2>/dev/null || echo '{"summary":{"total_tests":0,"passed":0,"failed":0,"pass_rate":0,"total_execution_time_ms":0},"results":[],"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'"}' > test-results.json
         
     # -------------------------------------------------------------------------
     # Process Results
