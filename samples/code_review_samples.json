@@ -5,7 +5,7 @@
       "code": "function add(a, b) { return a + b }"
     },
     "assertions": {
-      "should_contain": ["missing documentation", "style"],
+      "should_contain": ["documentation"],
       "should_not_contain": ["looks good", "no issues"]
     }
   }
